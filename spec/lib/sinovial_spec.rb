@@ -37,7 +37,8 @@ describe "ydocx" do
     doc = Nokogiri::XML(open(sinovial_FR_xml))
     doc.xpath('//chapters/chapter[contains(heading, "Fabricant")]').size.should > 0
     doc.xpath('//chapters/chapter[contains(heading, "Distributeur")]').size.should > 0
-    doc.xpath('//chapters/chapter[contains(heading, "Remarques particulières")]').size.should > 0
+    puts doc.xpath('//chapters/chapter[contains(heading, "Remarques particuli")]').first.children.first.text
+    doc.xpath('//chapters/chapter[contains(heading, "Remarques particuli")]').size.should > 0
   end
 
   it "should convert sinovial_DE to xml" do
