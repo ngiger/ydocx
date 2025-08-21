@@ -1,15 +1,13 @@
 #!/usr/bin/env ruby
-# encoding: utf-8
-
-require 'nokogiri'
-require 'pathname'
-require 'ydocx/markup_method'
+require "nokogiri"
+require "pathname"
+require "ydocx/markup_method"
 
 module YDocx
   class Builder
     include MarkupMethod
     attr_accessor :contents, :container, :indecies, :references,
-                  :block, :files, :style, :title
+      :block, :files, :style, :title
     def initialize(contents)
       @contents = contents
       @container = {}
@@ -17,16 +15,18 @@ module YDocx
       @references = []
       @block = :div
       @block_class = nil
-      @files = Pathname.new('.')
+      @files = Pathname.new(".")
       @style = false
-      @title = ''
+      @title = ""
       init
       if block_given?
         yield self
       end
     end
+
     def init
     end
+
     def build_html
       contents = @contents
       body = compile(contents, :html)
@@ -42,15 +42,16 @@ module YDocx
       builder = Nokogiri::HTML::Builder.new do |doc|
         doc.html {
           doc.head {
-            doc.meta :charset => 'utf-8'
+            doc.meta charset: "utf-8"
             doc.title @title
             doc.style { doc << style } if @style
           }
           doc.body { doc << body }
         }
       end
-      builder.to_html.gsub(/\n/, '')
+      builder.to_html.delete("\n")
     end
+
     def build_xml
       paragraphs = compile(@contents, :xml)
       builder = Nokogiri::XML::Builder.new do |xml|
@@ -58,20 +59,22 @@ module YDocx
           xml.paragraphs { xml << paragraphs }
         }
       end
-      builder.to_xml(:indent => 0, :encoding => 'utf-8').gsub(/\n/, '')
+      builder.to_xml(indent: 0, encoding: "utf-8").delete("\n")
     end
+
     private
+
     def compile(contents, mode)
-      result = ''
+      result = ""
       headings = 0
       block_start = (@block_class ? "<#{@block} class='#{@block_class}'>" : "<#{@block}>")
       block_close = "</#{@block}>"
       contents.each do |element|
-        if element[:tag].to_s =~ /^h[1-9]$/ # block
-          if headings == 0
-            result << block_start
+        if /^h[1-9]$/.match?(element[:tag].to_s) # block
+          result << if headings == 0
+            block_start
           else
-            result << "#{block_close}#{block_start}"
+            "#{block_close}#{block_start}"
           end
           headings += 1
         end
@@ -79,19 +82,22 @@ module YDocx
       end
       result << block_close
     end
+
     def build_after_content
       nil
     end
+
     def build_before_content
       nil
     end
-    def build_tag(tag, content, attributes, mode=:html)
+
+    def build_tag(tag, content, attributes, mode = :html)
       if tag == :br and mode != :xml
         return "<br/>"
       elsif content.nil? or content.empty?
-        return '' if attributes.nil? # without img
+        return "" if attributes.nil? # without img
       end
-      _content = ''
+      _content = ""
       if content.is_a? Array
         content.each do |c|
           next if c.nil? or c.empty?
@@ -107,49 +113,51 @@ module YDocx
         _content = content
       end
       _tag = tag.to_s
-      _attributes = ''
+      _attributes = ""
       unless attributes.empty?
         attributes.each_pair do |key, value|
           next if mode == :xml and key.to_s =~ /(id|style|colspan)/u
-          if tag == :img and key == :src
-            _attributes << " src=\"#{resolve_path(value.to_s)}\""
+          _attributes << if tag == :img and key == :src
+            " src=\"#{resolve_path(value.to_s)}\""
           else
-            _attributes << " #{key.to_s}=\"#{value.to_s}\""
+            " #{key}=\"#{value}\""
           end
         end
       end
       if mode == :xml
         case _tag.to_sym
-        when :span    then _tag = 'underline'
-        when :strong  then _tag = 'bold'
-        when :em      then _tag = 'italic'
-        when :p       then _tag = 'paragraph'
-        when :h2, :h3 then _tag = 'heading'
-        when :sup     then _tag = 'superscript' # text
-        when :sub     then _tag = 'subscript'   # text
+        when :span then _tag = "underline"
+        when :strong then _tag = "bold"
+        when :em then _tag = "italic"
+        when :p then _tag = "paragraph"
+        when :h2, :h3 then _tag = "heading"
+        when :sup then _tag = "superscript" # text
+        when :sub then _tag = "subscript"   # text
         end
       end
       if tag == :img
-        return "<#{_tag}#{_attributes}/>"
+        "<#{_tag}#{_attributes}/>"
       else
-        return "<#{_tag}#{_attributes}>#{_content}</#{_tag}>"
+        "<#{_tag}#{_attributes}>#{_content}</#{_tag}>"
       end
     end
+
     def style
-      style = <<-CSS
-table, tr, td {
-  border-collapse: collapse;
-  border:          1px solid gray;
-}
-table {
-  margin: 5px 0 5px 0;
-}
-td {
-  padding: 5px 10px;
-}
+      style = <<~CSS
+        table, tr, td {
+          border-collapse: collapse;
+          border:          1px solid gray;
+        }
+        table {
+          margin: 5px 0 5px 0;
+        }
+        td {
+          padding: 5px 10px;
+        }
       CSS
-      style.gsub(/\s\s+|\n/, ' ')
+      style.gsub(/\s\s+|\n/, " ")
     end
+
     def resolve_path(path)
       @files.join path
     end

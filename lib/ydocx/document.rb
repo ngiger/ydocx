@@ -1,24 +1,23 @@
 #!/usr/bin/env ruby
-# encoding: utf-8
-
-require 'pathname'
-require 'zip'
+require "pathname"
+require "zip"
 begin
-  require 'rmagick'
+  require "rmagick"
 rescue LoadError
   warn "Couldn't load rmagick: .wmf conversion off"
 end
-require 'ydocx/parser'
-require 'ydocx/builder'
+require "ydocx/parser"
+require "ydocx/builder"
 
 module YDocx
   class Document
-    attr_reader :builder,:contents, :images, :indecies,
-                :parser, :path
-    def self.open(file, options={})
-      self.new(file, options)
+    attr_reader :builder, :contents, :images, :indecies,
+      :parser, :path
+    def self.open(file, options = {})
+      new(file, options)
     end
-    def initialize(file, options={})
+
+    def initialize(file, options = {})
       @parser = nil
       @builder = nil
       @contents = nil
@@ -26,22 +25,26 @@ module YDocx
       @references = []
       @images = []
       @options = options
-      @path = Pathname.new('.')
+      @path = Pathname.new(".")
       @files = nil
       @zip = nil
       init
       read(file)
     end
+
     def init
     end
+
     def output_directory
-      @files ||= @path.dirname.join(@path.basename('.docx').to_s + '_files')
+      @files ||= @path.dirname.join(@path.basename(".docx").to_s + "_files")
     end
+
     def output_file(ext)
-      @path.sub_ext(".#{ext.to_s}")
+      @path.sub_ext(".#{ext}")
     end
-    def to_html(output=false, options={})
-      html = ''
+
+    def to_html(output = false, options = {})
+      html = ""
       options = @options.merge(options)
       files = output_directory
       @builder = Builder.new(@contents) do |builder|
@@ -57,14 +60,15 @@ module YDocx
       if output
         create_files if has_image?
         html_file = output_file(:html)
-        File.open(html_file, 'w:utf-8') do |f|
+        File.open(html_file, "w:utf-8") do |f|
           f.puts html
         end
       end
       html
     end
-    def to_xml(output=false, options={})
-      xml = ''
+
+    def to_xml(output = false, options = {})
+      xml = ""
       options = @options.merge(options)
       Builder.new(@contents) do |builder|
         builder.block = options.has_key?(:block) ? options[:block] : :chapter
@@ -73,13 +77,15 @@ module YDocx
       if output
         xml_file = output_file(:xml)
         mkdir xml_file.parent
-        File.open(xml_file, 'w:utf-8') do |f|
+        File.open(xml_file, "w:utf-8") do |f|
           f.puts xml
         end
       end
       xml
     end
+
     private
+
     def create_files
       files_dir = output_directory
       mkdir Pathname.new(files_dir) unless files_dir.exist?
@@ -93,34 +99,37 @@ module YDocx
       end
       @zip.close
     end
+
     def organize_image(origin_path, source_path)
       binary = @zip.find_entry("word/#{origin_path}").get_input_stream
       if source_path.extname != origin_path.extname # convert
         if defined? Magick::Image
           image = Magick::Image.from_blob(binary.read).first
           image.format = source_path.extname[1..-1].upcase
-          output_directory.join(source_path).open('wb') do |f|
+          output_directory.join(source_path).open("wb") do |f|
             f.puts image.to_blob
           end
         else # copy original image
-          output_directory.join(dir, origin_path.basename).open('wb') do |f|
+          output_directory.join(dir, origin_path.basename).open("wb") do |f|
             f.puts binary.read
           end
         end
       else
-        output_directory.join(source_path).open('wb') do |f|
+        output_directory.join(source_path).open("wb") do |f|
           f.puts binary.read
         end
       end
     end
+
     def has_image?
       !@images.empty?
     end
+
     def read(file)
       @path = Pathname.new file
       @zip = Zip::File.open(@path.realpath)
-      doc = @zip.find_entry('word/document.xml').get_input_stream
-      rel = @zip.find_entry('word/_rels/document.xml.rels').get_input_stream
+      doc = @zip.find_entry("word/document.xml").get_input_stream
+      rel = @zip.find_entry("word/_rels/document.xml.rels").get_input_stream
       @parser = Parser.new(doc, rel) do |parser|
         parser.lang = @options[:lang] if @options[:lang]
         @contents = parser.parse
@@ -129,6 +138,7 @@ module YDocx
       end
       @zip.close
     end
+
     def mkdir(path)
       return if path.exist?
       parent = path.parent

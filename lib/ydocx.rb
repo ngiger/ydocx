@@ -1,4 +1,3 @@
 #!/usr/bin/env ruby
 
-require 'ydocx/document'
-
+require "ydocx/document"

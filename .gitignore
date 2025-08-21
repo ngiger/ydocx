@@ -2,4 +2,6 @@ pkg
 coverage
 .bundle
 .~lock*
-
+.devenv*
+devenv.local.nix
+.direnv
